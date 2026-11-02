@@ -94,3 +94,81 @@ def add_financial_features(df):
     )
 
     return result
+
+def add_additional_financial_features(df):
+    """
+    Create additional financial and demographic features.
+
+    Returns a copy of the input DataFrame with new features.
+    """
+
+    result = df.copy()
+
+    required_columns = [
+        "AMT_CREDIT",
+        "AMT_INCOME_TOTAL",
+        "AMT_GOODS_PRICE",
+        "AMT_ANNUITY",
+        "DAYS_EMPLOYED",
+        "DAYS_BIRTH",
+    ]
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in result.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"Missing required columns: {missing_columns}"
+        )
+
+    # Replace infinite values before calculating ratios.
+    result = result.replace([np.inf, -np.inf], np.nan)
+
+    # Loan amount relative to income.
+    result["CREDIT_INCOME_RATIO_V2"] = (
+        result["AMT_CREDIT"]
+        / result["AMT_INCOME_TOTAL"].where(
+            result["AMT_INCOME_TOTAL"] > 0
+        )
+    )
+
+    # Goods price relative to income.
+    result["GOODS_INCOME_RATIO"] = (
+        result["AMT_GOODS_PRICE"]
+        / result["AMT_INCOME_TOTAL"].where(
+            result["AMT_INCOME_TOTAL"] > 0
+        )
+    )
+
+    # Annuity relative to income.
+    result["ANNUITY_INCOME_RATIO_V2"] = (
+        result["AMT_ANNUITY"]
+        / result["AMT_INCOME_TOTAL"].where(
+            result["AMT_INCOME_TOTAL"] > 0
+        )
+    )
+
+    # Employment duration in years.
+    result["EMPLOYED_YEARS"] = (
+        result["DAYS_EMPLOYED"].where(
+            result["DAYS_EMPLOYED"] < 0
+        ).abs() / 365.25
+    )
+
+    # Age in years.
+    result["AGE_YEARS_V2"] = (
+        result["DAYS_BIRTH"].abs() / 365.25
+    )
+
+    # Loan amount relative to the price of the goods.
+    result["CREDIT_GOODS_RATIO"] = (
+        result["AMT_CREDIT"]
+        / result["AMT_GOODS_PRICE"].where(
+            result["AMT_GOODS_PRICE"] > 0
+        )
+    )
+
+    return result
